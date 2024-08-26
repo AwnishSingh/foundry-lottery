@@ -59,7 +59,7 @@ contract RaffleTest is Test, CodeConstants {
 
     function testEnteringRaffleEmitsEvent() public {
         vm.prank(PLAYER);
-        vm.expectEmit(true,false,false,false,address(raffle));
+        vm.expectEmit(true, false, false, false, address(raffle));
         emit RaffleEntered(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
     }
@@ -74,6 +74,7 @@ contract RaffleTest is Test, CodeConstants {
         vm.prank(PLAYER);
         raffle.enterRaffle{value: entranceFee}();
     }
+
     function testCheckUpkeepReturnsFalseIfItHasNoBalance() public {
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
@@ -123,7 +124,9 @@ contract RaffleTest is Test, CodeConstants {
         raffle.enterRaffle{value: entranceFee}();
         currentBalance = currentBalance + entranceFee;
         numPlayers = numPlayers + 1;
-        vm.expectRevert(abi.encodeWithSelector(Raffle.Raffle__UpkeepNotNeeded.selector,currentBalance,numPlayers,rState));
+        vm.expectRevert(
+            abi.encodeWithSelector(Raffle.Raffle__UpkeepNotNeeded.selector, currentBalance, numPlayers, rState)
+        );
         raffle.performUpKeep("");
     }
 
@@ -135,7 +138,7 @@ contract RaffleTest is Test, CodeConstants {
         _;
     }
 
-    function testPerfromUpkeepUpdatesRaffleStateAndEmitsRequestId()  public raffleEntered {
+    function testPerfromUpkeepUpdatesRaffleStateAndEmitsRequestId() public raffleEntered {
         //Arrange
 
         //Act
@@ -143,7 +146,7 @@ contract RaffleTest is Test, CodeConstants {
         raffle.performUpKeep("");
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 requestId = entries[1].topics[1];
-        
+
         //Assert
         Raffle.RaffleState raffleState = raffle.getRaffleState();
         assert(uint256(requestId) > 0);
@@ -151,15 +154,19 @@ contract RaffleTest is Test, CodeConstants {
     }
 
     modifier skipFork() {
-        if(block.chainid != LOCAL_CHAIN_ID){
+        if (block.chainid != LOCAL_CHAIN_ID) {
             return;
         }
         _;
     }
 
-    function testFulfillrandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId) public raffleEntered skipFork{
+    function testFulfillrandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId)
+        public
+        raffleEntered
+        skipFork
+    {
         vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
-        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(randomRequestId,address(raffle));
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(randomRequestId, address(raffle));
     }
 
     function testFulfillrandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEntered skipFork {
@@ -167,9 +174,9 @@ contract RaffleTest is Test, CodeConstants {
         uint256 startingIndex = 1;
         address expectedWinner = address(1);
 
-        for(uint256 i = startingIndex; i < startingIndex + additionalEntrants; i++) {
+        for (uint256 i = startingIndex; i < startingIndex + additionalEntrants; i++) {
             address newPlayer = address(uint160(i));
-            hoax(newPlayer,1 ether);
+            hoax(newPlayer, 1 ether);
             raffle.enterRaffle{value: entranceFee}();
         }
         uint256 startingTimeStamp = raffle.getLastTimeStamp();
@@ -179,13 +186,13 @@ contract RaffleTest is Test, CodeConstants {
         raffle.performUpKeep("");
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bytes32 requestId = entries[1].topics[1];
-        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(uint256(requestId),address(raffle));
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(uint256(requestId), address(raffle));
 
         address recentWinner = raffle.getRecentWinner();
         Raffle.RaffleState raffleState = raffle.getRaffleState();
         uint256 winnerBalance = recentWinner.balance;
         uint256 endingTimeStamp = raffle.getLastTimeStamp();
-        uint256 prize = entranceFee * (additionalEntrants+1);
+        uint256 prize = entranceFee * (additionalEntrants + 1);
 
         assert(recentWinner == expectedWinner);
         assert(uint256(raffleState) == 0);
